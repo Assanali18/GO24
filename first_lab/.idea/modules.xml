@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/control_structure.iml" filepath="$PROJECT_DIR$/control_structure.iml" />
+      <module fileurl="file://$PROJECT_DIR$/embedding_composition.iml" filepath="$PROJECT_DIR$/embedding_composition.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/first_lab.iml" filepath="$PROJECT_DIR$/.idea/first_lab.iml" />
+      <module fileurl="file://$PROJECT_DIR$/functions.iml" filepath="$PROJECT_DIR$/functions.iml" />
+      <module fileurl="file://$PROJECT_DIR$/helloworld.iml" filepath="$PROJECT_DIR$/helloworld.iml" />
+      <module fileurl="file://$PROJECT_DIR$/interfaces_poly.iml" filepath="$PROJECT_DIR$/interfaces_poly.iml" />
+      <module fileurl="file://$PROJECT_DIR$/json.iml" filepath="$PROJECT_DIR$/json.iml" />
+      <module fileurl="file://$PROJECT_DIR$/structs_methods.iml" filepath="$PROJECT_DIR$/structs_methods.iml" />
+      <module fileurl="file://$PROJECT_DIR$/variables.iml" filepath="$PROJECT_DIR$/variables.iml" />
+    </modules>
+  </component>
+</project>
