@@ -71,11 +71,13 @@ func GetUsers(minAge, maxAge, page, pageSize int, sort string) ([]models.User, e
 		index++
 	}
 
-	if sort == "name_asc" {
+	switch sort {
+	case "name_asc":
+
 		query += " ORDER BY name ASC"
-	} else if sort == "name_desc" {
+	case "name_desc":
 		query += " ORDER BY name DESC"
-	} else {
+	default:
 		query += " ORDER BY id"
 	}
 
