@@ -4,14 +4,13 @@ import (
 	"advsql/internal/config"
 	"database/sql"
 	"fmt"
-	"log"
-
 	_ "github.com/lib/pq"
+	"log"
 )
 
 var DB *sql.DB
 
-func ConnectDB() (*sql.DB, error) {
+func ConnectDB() error {
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
 		config.AppConfig.DBHost,
 		config.AppConfig.DBUser,
@@ -21,9 +20,10 @@ func ConnectDB() (*sql.DB, error) {
 	)
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		log.Println(err)
-		return nil, err
+		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	return db, nil
+	DB = db
+	log.Println("Successfully connected to the database.")
+	return nil
 }

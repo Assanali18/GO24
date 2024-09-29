@@ -22,6 +22,7 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 	maxAge, _ := strconv.Atoi(r.URL.Query().Get("max_age"))
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
+	sort := r.URL.Query().Get("sort")
 
 	if page <= 0 {
 		page = 1
@@ -30,7 +31,7 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 		pageSize = 10
 	}
 
-	users, err := services.GetUsers(minAge, maxAge, page, pageSize)
+	users, err := services.GetUsers(minAge, maxAge, page, pageSize, sort)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -81,7 +82,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		if err.Error() == "user not found" {
 			http.Error(w, "User not found", http.StatusNotFound)
 		} else {
-			http.Error(w, "Error updating user", http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 		return
 	}

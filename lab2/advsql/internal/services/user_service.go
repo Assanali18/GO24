@@ -49,7 +49,7 @@ func CreateUser(users []models.User) error {
 	return nil
 }
 
-func GetUsers(minAge, maxAge, page, pageSize int) ([]models.User, error) {
+func GetUsers(minAge, maxAge, page, pageSize int, sort string) ([]models.User, error) {
 	offset := (page - 1) * pageSize
 
 	query := `
@@ -71,7 +71,15 @@ func GetUsers(minAge, maxAge, page, pageSize int) ([]models.User, error) {
 		index++
 	}
 
-	query += fmt.Sprintf(" ORDER BY id LIMIT $%d OFFSET $%d", index, index+1)
+	if sort == "name_asc" {
+		query += " ORDER BY name ASC"
+	} else if sort == "name_desc" {
+		query += " ORDER BY name DESC"
+	} else {
+		query += " ORDER BY id"
+	}
+
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", index, index+1)
 	params = append(params, pageSize, offset)
 
 	rows, err := database.DB.Query(query, params...)
@@ -107,7 +115,7 @@ func UpdateUser(user models.User) error {
 		return fmt.Errorf("failed to retrieve rows affected: %w", err)
 	}
 	if rowsAffected == 0 {
-		return fmt.Errorf("no user found with id %d", user.ID)
+		return fmt.Errorf("user not found")
 	}
 	return nil
 }
@@ -123,7 +131,7 @@ func DeleteUser(userID int) error {
 		return fmt.Errorf("failed to retrieve rows affected: %w", err)
 	}
 	if rowsAffected == 0 {
-		return fmt.Errorf("no user found with id %d", userID)
+		return fmt.Errorf("user not found")
 	}
 	return nil
 }
