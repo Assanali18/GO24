@@ -33,7 +33,6 @@ func setupMockDB(t *testing.T) {
 	}
 
 	database.DB = mockDB
-
 }
 
 func TestCreateUserWithProfile(t *testing.T) {
