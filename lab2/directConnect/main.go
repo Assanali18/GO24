@@ -9,14 +9,6 @@ import (
 	"os"
 )
 
-const (
-	host     = "localhost"
-	port     = 5432
-	user     = "postgres"
-	password = "Asan18102004"
-	dbname   = "go_lab2"
-)
-
 func connectDB() (*sql.DB, error) {
 
 	err := godotenv.Load("../.env")
@@ -27,7 +19,7 @@ func connectDB() (*sql.DB, error) {
 	host := os.Getenv("DB_HOST")
 	user := os.Getenv("DB_USER")
 	password := os.Getenv("DB_PASSWORD")
-	dbname := os.Getenv("DB_NAME")
+	dbname := os.Getenv("DB_NAME_EASY")
 	port := os.Getenv("DB_PORT")
 
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
