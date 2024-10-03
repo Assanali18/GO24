@@ -12,9 +12,9 @@ import (
 
 func RegisterRoutes(r *mux.Router) {
 	r.HandleFunc("/users", GetUsers).Methods("GET")
-	r.HandleFunc("/user", CreateUser).Methods("POST")
-	r.HandleFunc("/user/{id}", UpdateUser).Methods("PUT")
-	r.HandleFunc("/user/{id}", DeleteUser).Methods("DELETE")
+	r.HandleFunc("/users", CreateUser).Methods("POST")
+	r.HandleFunc("/users/{id}", UpdateUser).Methods("PUT")
+	r.HandleFunc("/users/{id}", DeleteUser).Methods("DELETE")
 }
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
@@ -24,6 +24,7 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users)
 }
 
