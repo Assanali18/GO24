@@ -58,35 +58,51 @@ func GetUsersWithProfiles(minAge, maxAge, page, pageSize int, sort string) ([]mo
 }
 func UpdateUserAndProfile(user *models.User, profile *models.Profile) error {
 	return database.DB.Transaction(func(tx *gorm.DB) error {
-		result := tx.Model(&models.User{}).Where("id = ?", user.ID).Updates(user)
+
+		result := tx.Model(&models.User{}).
+			Where("id = ?", user.ID).
+			Updates(map[string]interface{}{
+				"name": user.Name,
+				"age":  user.Age,
+			})
 		if result.Error != nil {
 			return fmt.Errorf("failed to update user: %w", result.Error)
 		}
-
 		if result.RowsAffected == 0 {
 			return fmt.Errorf("user not found")
 		}
 
-		result = tx.Model(&models.Profile{}).Where("user_id = ?", user.ID).Updates(profile)
-		if result.Error != nil {
-			return fmt.Errorf("failed to update profile: %w", result.Error)
-		}
+		if profile != nil {
+			result = tx.Model(&models.Profile{}).
+				Where("user_id = ?", user.ID).
+				Updates(map[string]interface{}{
+					"bio":                 profile.Bio,
+					"profile_picture_url": profile.ProfilePictureURL,
+				})
+			if result.Error != nil {
+				return fmt.Errorf("failed to update profile: %w", result.Error)
+			}
 
-		if result.RowsAffected == 0 {
-			return fmt.Errorf("profile not found")
 		}
-
 		return nil
 	})
 }
+
 func DeleteUserWithProfile(userID uint) error {
 	err := database.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Delete(&models.User{}, userID).Error; err != nil {
-			return err
+		result := tx.Delete(&models.User{}, userID)
+		if result.Error != nil {
+			return result.Error
 		}
-		if err := tx.Delete(&models.Profile{}, "user_id = ?", userID).Error; err != nil {
-			return err
+		if result.RowsAffected == 0 {
+			return fmt.Errorf("user not found")
 		}
+
+		result = tx.Delete(&models.Profile{}, "user_id = ?", userID)
+		if result.Error != nil {
+			return result.Error
+		}
+
 		return nil
 	})
 

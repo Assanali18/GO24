@@ -3,6 +3,7 @@ package transport
 import (
 	"encoding/json"
 	"github.com/gorilla/mux"
+	"gormADV/internal/config"
 	"gormADV/internal/models"
 	"gormADV/internal/services"
 	"net/http"
@@ -41,6 +42,11 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 func CreateUser(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	if err := config.Validate.Struct(user); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -50,7 +56,9 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(user)
 }
 
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
@@ -69,7 +77,12 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	user.ID = uint(userID)
 
-	if err := services.UpdateUserAndProfile(&user, &user.Profile); err != nil {
+	if err := config.Validate.Struct(user); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := services.UpdateUserAndProfile(&user, user.Profile); err != nil {
 		if err.Error() == "user not found" {
 			http.Error(w, "User not found", http.StatusNotFound)
 		} else {
@@ -80,7 +93,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "User and profile updated successfully"})
+	json.NewEncoder(w).Encode(user)
 }
 
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
@@ -95,7 +108,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		if err.Error() == "user not found" {
 			http.Error(w, "User not found", http.StatusNotFound)
 		} else {
-			http.Error(w, "Error deleting user", http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 		return
 	}

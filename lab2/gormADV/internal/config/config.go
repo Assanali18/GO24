@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
 	"log"
 	"os"
@@ -15,6 +16,7 @@ type Config struct {
 }
 
 var AppConfig *Config
+var Validate = validator.New()
 
 func init() {
 	if err := godotenv.Load("../../../.env"); err != nil {

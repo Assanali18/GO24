@@ -3,14 +3,13 @@ package transport_test
 import (
 	"database/sql"
 	"github.com/DATA-DOG/go-sqlmock"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 	"gormADV/internal/database"
 	"gormADV/internal/models"
 	"gormADV/internal/services"
 	"testing"
-
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 var mockDB *gorm.DB
@@ -58,7 +57,6 @@ func TestCreateUserWithProfile(t *testing.T) {
 func TestGetUsersWithProfiles(t *testing.T) {
 	setupMockDB(t)
 
-	// Ожидаем, что запросы будут к таблице users
 	rows := sqlmock.NewRows([]string{"id", "name", "age"}).
 		AddRow(1, "John Doe", 25).
 		AddRow(2, "Jane Doe", 30)
@@ -67,7 +65,6 @@ func TestGetUsersWithProfiles(t *testing.T) {
 		WithArgs(18, 30, 10).
 		WillReturnRows(rows)
 
-	// Ожидаем дополнительный запрос к таблице profiles для загрузки профилей пользователей
 	profileRows := sqlmock.NewRows([]string{"user_id", "bio"}).
 		AddRow(1, "Bio for John").
 		AddRow(2, "Bio for Jane")
@@ -89,27 +86,31 @@ func TestGetUsersWithProfiles(t *testing.T) {
 		t.Errorf("Ожидания не были выполнены: %v", err)
 	}
 }
-
 func TestUpdateUserAndProfile(t *testing.T) {
 	setupMockDB(t)
-
-	mock.ExpectBegin()
-	// Изменяем запрос так, чтобы он соответствовал реальному SQL-запросу, который генерирует GORM.
-	mock.ExpectExec(`UPDATE "users" SET "id"=\$1, "updated_at"=\$2, "name"=\$3, "age"=\$4 WHERE "id" = \$5 AND "deleted_at" IS NULL`).
-		WithArgs(1, sqlmock.AnyArg(), "Jane Doe", 30, 1). // Учитываем "id" в запросе
-		WillReturnResult(sqlmock.NewResult(1, 1))
-
-	mock.ExpectExec(`UPDATE "profiles" SET "bio"=\$1 WHERE "user_id" = \$2`).
-		WithArgs("Some Profile Data", 1).
-		WillReturnResult(sqlmock.NewResult(1, 1))
-	mock.ExpectCommit()
 
 	user := &models.User{
 		Model: gorm.Model{ID: 1},
 		Name:  "Jane Doe",
 		Age:   30,
 	}
-	profile := &models.Profile{UserID: 1, Bio: "Some Profile Data"}
+	profile := &models.Profile{
+		UserID:            1,
+		Bio:               "Some Profile Data",
+		ProfilePictureURL: "http://example.com/profile.jpg",
+	}
+
+	mock.ExpectBegin()
+
+	mock.ExpectExec(`UPDATE "users" SET "age"=\$1,"name"=\$2,"updated_at"=\$3 WHERE id = \$4 AND "users"."deleted_at" IS NULL`).
+		WithArgs(30, "Jane Doe", sqlmock.AnyArg(), 1).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	mock.ExpectExec(`UPDATE "profiles" SET "bio"=\$1,"profile_picture_url"=\$2,"updated_at"=\$3 WHERE user_id = \$4 AND "profiles"."deleted_at" IS NULL`).
+		WithArgs("Some Profile Data", "http://example.com/profile.jpg", sqlmock.AnyArg(), 1).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	mock.ExpectCommit()
 
 	err := services.UpdateUserAndProfile(user, profile)
 	if err != nil {
@@ -125,16 +126,14 @@ func TestDeleteUserWithProfile(t *testing.T) {
 	setupMockDB(t)
 
 	mock.ExpectBegin()
-	// Уточняем soft delete для пользователя
-	mock.ExpectExec(`UPDATE "users" SET "deleted_at"=\$1 WHERE "users"."id" = \$2 AND "deleted_at" IS NULL`).
+
+	mock.ExpectExec(`UPDATE "users" SET "deleted_at"=\$1 WHERE "users"."id" = \$2 AND "users"."deleted_at" IS NULL`).
 		WithArgs(sqlmock.AnyArg(), 1).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	// Уточняем soft delete для профиля
-	mock.ExpectExec(`UPDATE "profiles" SET "deleted_at"=\$1 WHERE "user_id" = \$2 AND "deleted_at" IS NULL`).
+	mock.ExpectExec(`UPDATE "profiles" SET "deleted_at"=\$1 WHERE user_id = \$2 AND "profiles"."deleted_at" IS NULL`).
 		WithArgs(sqlmock.AnyArg(), 1).
 		WillReturnResult(sqlmock.NewResult(1, 1))
-
 	mock.ExpectCommit()
 
 	err := services.DeleteUserWithProfile(1)
