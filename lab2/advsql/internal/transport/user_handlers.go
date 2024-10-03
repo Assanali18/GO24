@@ -31,13 +31,30 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 		pageSize = 10
 	}
 
-	users, err := services.GetUsers(minAge, maxAge, page, pageSize, sort)
+	users, totalCount, err := services.GetUsers(minAge, maxAge, page, pageSize, sort)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	totalPages := (totalCount + pageSize - 1) / pageSize
+
+	response := struct {
+		Users      []models.User `json:"users"`
+		TotalItems int           `json:"total_items"`
+		Page       int           `json:"page"`
+		PageSize   int           `json:"page_size"`
+		TotalPages int           `json:"total_pages"`
+	}{
+		Users:      users,
+		TotalItems: totalCount,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalPages: totalPages,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(users)
+	json.NewEncoder(w).Encode(response)
 }
 
 func CreateUser(w http.ResponseWriter, r *http.Request) {

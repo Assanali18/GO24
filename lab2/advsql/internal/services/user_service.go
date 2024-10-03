@@ -5,6 +5,7 @@ import (
 	"advsql/internal/models"
 	"fmt"
 	"log"
+	"strings"
 )
 
 func СreateUsersTable() error {
@@ -49,31 +50,37 @@ func CreateUser(users []models.User) error {
 	return nil
 }
 
-func GetUsers(minAge, maxAge, page, pageSize int, sort string) ([]models.User, error) {
+func GetUsers(minAge, maxAge, page, pageSize int, sort string) ([]models.User, int, error) {
 	offset := (page - 1) * pageSize
 
-	query := `
-    SELECT id, name, age FROM users
-    WHERE 1=1
-    `
-
+	var whereClauses []string
 	var params []interface{}
-	index := 1
 
 	if minAge > 0 {
-		query += fmt.Sprintf(" AND age >= $%d", index)
+		whereClauses = append(whereClauses, fmt.Sprintf("age >= $%d", len(params)+1))
 		params = append(params, minAge)
-		index++
 	}
 	if maxAge > 0 {
-		query += fmt.Sprintf(" AND age <= $%d", index)
+		whereClauses = append(whereClauses, fmt.Sprintf("age <= $%d", len(params)+1))
 		params = append(params, maxAge)
-		index++
 	}
+
+	whereClause := ""
+	if len(whereClauses) > 0 {
+		whereClause = "WHERE " + strings.Join(whereClauses, " AND ")
+	}
+
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM users %s", whereClause)
+	var totalCount int
+	err := database.DB.QueryRow(countQuery, params...).Scan(&totalCount)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count users: %w", err)
+	}
+
+	query := fmt.Sprintf("SELECT id, name, age FROM users %s", whereClause)
 
 	switch sort {
 	case "name_asc":
-
 		query += " ORDER BY name ASC"
 	case "name_desc":
 		query += " ORDER BY name DESC"
@@ -81,12 +88,14 @@ func GetUsers(minAge, maxAge, page, pageSize int, sort string) ([]models.User, e
 		query += " ORDER BY id"
 	}
 
-	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", index, index+1)
-	params = append(params, pageSize, offset)
+	limitIndex := len(params) + 1
+	offsetIndex := len(params) + 2
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", limitIndex, offsetIndex)
+	queryParams := append(params, pageSize, offset)
 
-	rows, err := database.DB.Query(query, params...)
+	rows, err := database.DB.Query(query, queryParams...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query users: %w", err)
+		return nil, 0, fmt.Errorf("failed to query users: %w", err)
 	}
 	defer rows.Close()
 
@@ -94,16 +103,16 @@ func GetUsers(minAge, maxAge, page, pageSize int, sort string) ([]models.User, e
 	for rows.Next() {
 		var user models.User
 		if err := rows.Scan(&user.ID, &user.Name, &user.Age); err != nil {
-			return nil, fmt.Errorf("failed to scan user: %w", err)
+			return nil, 0, fmt.Errorf("failed to scan user: %w", err)
 		}
 		users = append(users, user)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("row iteration error: %w", err)
+		return nil, 0, fmt.Errorf("row iteration error: %w", err)
 	}
 
-	return users, nil
+	return users, totalCount, nil
 }
 
 func UpdateUser(user models.User) error {

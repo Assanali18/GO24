@@ -6,7 +6,9 @@ import (
 	"advsql/internal/transport"
 	"bytes"
 	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gorilla/mux"
 	"net/http"
@@ -27,16 +29,39 @@ func setupMockDB(t *testing.T) {
 }
 
 func TestGetUsers(t *testing.T) {
-	setupMockDB(t)
+	var err error
+	database.DB, mockDB, err = sqlmock.New()
+	if err != nil {
+		t.Fatalf("Error initializing mock database: %v", err)
+	}
+	defer database.DB.Close()
 
-	rows := sqlmock.NewRows([]string{"id", "name", "age"}).
+	minAge := 18
+	maxAge := 30
+	page := 1
+	pageSize := 10
+	sort := "name_asc"
+
+	params := []driver.Value{minAge, maxAge}
+
+	countQuery := `SELECT COUNT\(\*\) FROM users WHERE age >= \$1 AND age <= \$2`
+	countRows := sqlmock.NewRows([]string{"count"}).AddRow(2)
+	mockDB.ExpectQuery(countQuery).
+		WithArgs(params...).
+		WillReturnRows(countRows)
+
+	userRows := sqlmock.NewRows([]string{"id", "name", "age"}).
 		AddRow(1, "John Doe", 25).
 		AddRow(2, "Jane Doe", 30)
 
-	mockDB.ExpectQuery("SELECT id, name, age FROM users").
-		WillReturnRows(rows)
+	expectedSelectQuery := `SELECT id, name, age FROM users WHERE age >= \$1 AND age <= \$2 ORDER BY name ASC LIMIT \$3 OFFSET \$4`
+	queryParams := append(params, driver.Value(pageSize), driver.Value((page-1)*pageSize))
 
-	req, err := http.NewRequest("GET", "/users?page=1&page_size=10&min_age=18&max_age=30&sort=name_asc", nil)
+	mockDB.ExpectQuery(expectedSelectQuery).
+		WithArgs(queryParams...).
+		WillReturnRows(userRows)
+
+	req, err := http.NewRequest("GET", fmt.Sprintf("/users?page=%d&page_size=%d&min_age=%d&max_age=%d&sort=%s", page, pageSize, minAge, maxAge, sort), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,8 +75,15 @@ func TestGetUsers(t *testing.T) {
 		t.Errorf("Неверный код статуса: получили %v, ожидали %v", status, http.StatusOK)
 	}
 
-	var users []models.User
-	if err := json.NewDecoder(rr.Body).Decode(&users); err != nil {
+	var response struct {
+		Users      []models.User `json:"users"`
+		TotalItems int           `json:"total_items"`
+		Page       int           `json:"page"`
+		PageSize   int           `json:"page_size"`
+		TotalPages int           `json:"total_pages"`
+	}
+
+	if err := json.NewDecoder(rr.Body).Decode(&response); err != nil {
 		t.Errorf("Ошибка при декодировании ответа: %v", err)
 	}
 
