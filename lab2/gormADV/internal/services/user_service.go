@@ -26,15 +26,21 @@ func CreateUserWithProfile(user *models.User) error {
 	return nil
 }
 
-func GetUsersWithProfiles(minAge, maxAge, page, pageSize int, sort string) ([]models.User, error) {
+func GetUsersWithProfiles(minAge, maxAge, page, pageSize int, sort string) ([]models.User, int, error) {
 	var users []models.User
-	db := database.DB
+	var totalCount int64
+
+	db := database.DB.Model(&models.User{})
 
 	if minAge > 0 {
 		db = db.Where("age >= ?", minAge)
 	}
 	if maxAge > 0 {
 		db = db.Where("age <= ?", maxAge)
+	}
+
+	if err := db.Count(&totalCount).Error; err != nil {
+		return nil, 0, err
 	}
 
 	switch sort {
@@ -47,14 +53,11 @@ func GetUsersWithProfiles(minAge, maxAge, page, pageSize int, sort string) ([]mo
 	}
 
 	offset := (page - 1) * pageSize
-	db = db.Offset(offset).Limit(pageSize)
-
-	err := db.Preload("Profile").Find(&users).Error
-
-	if err != nil {
-		return nil, err
+	if err := db.Preload("Profile").Offset(offset).Limit(pageSize).Find(&users).Error; err != nil {
+		return nil, 0, err
 	}
-	return users, nil
+
+	return users, int(totalCount), nil
 }
 func UpdateUserAndProfile(user *models.User, profile *models.Profile) error {
 	return database.DB.Transaction(func(tx *gorm.DB) error {

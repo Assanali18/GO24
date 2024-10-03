@@ -57,25 +57,34 @@ func TestCreateUserWithProfile(t *testing.T) {
 func TestGetUsersWithProfiles(t *testing.T) {
 	setupMockDB(t)
 
+	countRows := sqlmock.NewRows([]string{"count"}).AddRow(2)
+	mock.ExpectQuery(`SELECT count\(\*\) FROM "users" WHERE age >= \$1 AND age <= \$2 AND "users"\."deleted_at" IS NULL`).
+		WithArgs(18, 30).
+		WillReturnRows(countRows)
+
 	rows := sqlmock.NewRows([]string{"id", "name", "age"}).
 		AddRow(1, "John Doe", 25).
 		AddRow(2, "Jane Doe", 30)
 
-	mock.ExpectQuery(`SELECT \* FROM "users" WHERE age >= \$1 AND age <= \$2 AND "users"."deleted_at" IS NULL ORDER BY name ASC LIMIT \$3`).
+	mock.ExpectQuery(`SELECT \* FROM "users" WHERE age >= \$1 AND age <= \$2 AND "users"\."deleted_at" IS NULL ORDER BY name ASC LIMIT \$3`).
 		WithArgs(18, 30, 10).
 		WillReturnRows(rows)
 
-	profileRows := sqlmock.NewRows([]string{"user_id", "bio"}).
-		AddRow(1, "Bio for John").
-		AddRow(2, "Bio for Jane")
+	profileRows := sqlmock.NewRows([]string{"id", "user_id", "bio", "profile_picture_url"}).
+		AddRow(1, 1, "Bio for John", "http://example.com/john.jpg").
+		AddRow(2, 2, "Bio for Jane", "http://example.com/jane.jpg")
 
-	mock.ExpectQuery(`SELECT \* FROM "profiles" WHERE "profiles"."user_id" IN \(\$1,\$2\) AND "profiles"."deleted_at" IS NULL`).
+	mock.ExpectQuery(`SELECT \* FROM "profiles" WHERE "profiles"\."user_id" IN \(\$1,\$2\) AND "profiles"\."deleted_at" IS NULL`).
 		WithArgs(1, 2).
 		WillReturnRows(profileRows)
 
-	users, err := services.GetUsersWithProfiles(18, 30, 1, 10, "name_asc")
+	users, totalCount, err := services.GetUsersWithProfiles(18, 30, 1, 10, "name_asc")
 	if err != nil {
 		t.Errorf("Получение списка пользователей завершилось с ошибкой: %v", err)
+	}
+
+	if totalCount != 2 {
+		t.Errorf("Ожидалось общее количество пользователей 2, но получили %v", totalCount)
 	}
 
 	if len(users) != 2 {
@@ -86,6 +95,7 @@ func TestGetUsersWithProfiles(t *testing.T) {
 		t.Errorf("Ожидания не были выполнены: %v", err)
 	}
 }
+
 func TestUpdateUserAndProfile(t *testing.T) {
 	setupMockDB(t)
 
