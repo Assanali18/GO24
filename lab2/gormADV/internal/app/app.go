@@ -8,6 +8,8 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	httpSwagger "github.com/swaggo/http-swagger"
+	_ "gormADV/docs"
 )
 
 func Run() {
@@ -20,6 +22,8 @@ func Run() {
 	r := mux.NewRouter()
 
 	transport.RegisterRoutes(r)
+
+	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 
 	log.Fatal(http.ListenAndServe(":8080", r))
 }

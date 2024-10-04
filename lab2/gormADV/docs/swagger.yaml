@@ -1,0 +1,234 @@
+basePath: /
+definitions:
+  models.Profile:
+    properties:
+      bio:
+        description: |-
+          The user's bio.
+          example: Software Developer
+        type: string
+      id:
+        description: |-
+          The profile's ID.
+          example: 1
+        type: integer
+      profile_picture_url:
+        description: |-
+          The URL to the user's profile picture.
+          example: http://example.com/profile.jpg
+        type: string
+      user_id:
+        description: |-
+          The ID of the user this profile belongs to.
+          example: 1
+        type: integer
+    type: object
+  models.User:
+    properties:
+      age:
+        description: |-
+          The user's age.
+          example: 30
+        minimum: 0
+        type: integer
+      id:
+        description: |-
+          The user's ID.
+          example: 1
+        type: integer
+      name:
+        description: |-
+          The user's name.
+          example: John Doe
+        type: string
+      profile:
+        allOf:
+        - $ref: '#/definitions/models.Profile'
+        description: The user's profile.
+    required:
+    - age
+    - name
+    type: object
+  models.UserListResponse:
+    properties:
+      page:
+        description: |-
+          The current page number.
+          example: 1
+        type: integer
+      page_size:
+        description: |-
+          The size of each page.
+          example: 10
+        type: integer
+      total_items:
+        description: |-
+          The total number of users.
+          example: 100
+        type: integer
+      total_pages:
+        description: |-
+          The total number of pages.
+          example: 10
+        type: integer
+      users:
+        description: The list of users.
+        items:
+          $ref: '#/definitions/models.User'
+        type: array
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@example.com
+    name: API Support
+    url: http://www.example.com/support
+  description: This is a sample API server.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://example.com/terms/
+  title: GO REST API WITH GORM
+  version: "1.0"
+paths:
+  /users:
+    get:
+      consumes:
+      - application/json
+      description: Get a paginated list of users with optional filters for age and
+        sorting in ascending or descending order.
+      parameters:
+      - description: Minimum Age
+        in: query
+        name: min_age
+        type: integer
+      - description: Maximum Age
+        in: query
+        name: max_age
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        type: integer
+      - description: Sort by name in ascending or descending order
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UserListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: Create a new user with profile
+      parameters:
+      - description: User to create
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Create user
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete user by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "400":
+          description: Invalid user ID
+          schema:
+            type: string
+        "404":
+          description: User not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Delete user
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Update user details by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated user
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "404":
+          description: User not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Update user
+      tags:
+      - users
+swagger: "2.0"
